@@ -1,4 +1,4 @@
-name: Build Windows Executable
+name: Build Executables
 
 on:
   workflow_dispatch:
@@ -9,44 +9,77 @@ on:
       - main
 
 jobs:
-  build:
+  build_windows:
     runs-on: windows-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.11
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.11
 
-    - name: Install dependencies
-      run: pip install -r requirements.txt
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
-    - name: Build executable
-      run: pyinstaller --onefile --windowed --noconsole sort_pics.py
+      - name: Build executable
+        run: pyinstaller --onefile --windowed --noconsole sort_pics.py
 
-    - name: Move executable
-      run: mv dist/sort_pics.exe ./
+      - name: Move executable
+        run: mv dist/sort_pics.exe ./
 
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: v${{ github.run_number }}
-        release_name: Release ${{ github.run_number }}
-        body: Automatic release of version ${{ github.run_number }}
-        draft: false
-        prerelease: false
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ github.run_number }}
+          release_name: Release ${{ github.run_number }}
+          body: Automatic release of version ${{ github.run_number }}
+          draft: false
+          prerelease: false
 
-    - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./sort_pics.exe
-        asset_name: sort_pics.exe
-        asset_content_type: application/octet-stream
+      - name: Upload Release Asset (Windows)
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./sort_pics.exe
+          asset_name: sort_pics.exe
+          asset_content_type: application/octet-stream
+
+  build_macos:
+    runs-on: macos-latest
+    needs: build_windows
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.11
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build executable
+        run: pyinstaller --onefile --windowed --noconsole sort_pics.py
+
+      - name: Move executable
+        run: mv dist/sort_pics ./
+
+      - name: Upload Release Asset (macOS)
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.build_windows.outputs.upload_url }}
+          asset_path: ./sort_pics
+          asset_name: sort_pics-macos
+          asset_content_type: application/octet-stream
