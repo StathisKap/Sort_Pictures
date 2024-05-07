@@ -8,11 +8,9 @@ on:
     branches:
       - main
 
-
 jobs:
   build:
     runs-on: windows-latest
-
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
@@ -23,20 +21,32 @@ jobs:
         python-version: 3.11
 
     - name: Install dependencies
-      run: |
-        pip install -r requirements.txt
+      run: pip install -r requirements.txt
 
     - name: Build executable
-      run: |
-        pyinstaller --onefile --windowed --noconsole sort_pics.py
+      run: pyinstaller --onefile --windowed --noconsole sort_pics.py
 
     - name: Move executable
-      run: |
-        mv dist/sort_pics.exe ./
+      run: mv dist/sort_pics.exe ./
 
     - name: Create Release
-      uses: ncipollo/release-action@v1
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        name: Release ${{ github.run_number }}
-        tag: v${{ github.run_number }}
+        tag_name: v${{ github.run_number }}
+        release_name: Release ${{ github.run_number }}
         body: Automatic release of version ${{ github.run_number }}
+        draft: false
+        prerelease: false
+
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./sort_pics.exe
+        asset_name: sort_pics.exe
+        asset_content_type: application/octet-stream
