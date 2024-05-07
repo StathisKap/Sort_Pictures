@@ -9,10 +9,26 @@ on:
       - main
 
 jobs:
-  build_windows:
-    runs-on: windows-latest
+  create_release:
+    runs-on: ubuntu-latest
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ github.run_number }}
+          release_name: Release ${{ github.run_number }}
+          body: Automatic release of version ${{ github.run_number }}
+          draft: false
+          prerelease: false
+
+  build_windows:
+    runs-on: windows-latest
+    needs: create_release
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -31,31 +47,19 @@ jobs:
       - name: Move executable
         run: mv dist/sort_pics.exe ./
 
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v${{ github.run_number }}
-          release_name: Release ${{ github.run_number }}
-          body: Automatic release of version ${{ github.run_number }}
-          draft: false
-          prerelease: false
-
       - name: Upload Release Asset (Windows)
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ needs.create_release.outputs.upload_url }}
           asset_path: ./sort_pics.exe
           asset_name: sort_pics.exe
           asset_content_type: application/octet-stream
 
   build_macos:
     runs-on: macos-latest
-    needs: build_windows
+    needs: create_release
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -72,14 +76,14 @@ jobs:
         run: pyinstaller --onefile --windowed --noconsole sort_pics.py
 
       - name: Move executable
-        run: mv dist/sort_pics ./
+        run: mv dist/sort_pics.app ./
 
       - name: Upload Release Asset (macOS)
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ needs.build_windows.outputs.upload_url }}
-          asset_path: ./sort_pics
-          asset_name: sort_pics-macos
+          upload_url: ${{ needs.create_release.outputs.upload_url }}
+          asset_path: ./sort_pics.app
+          asset_name: sort_pics.app
           asset_content_type: application/octet-stream
