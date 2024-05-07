@@ -1,9 +1,13 @@
 name: Build Windows Executable
 
 on:
+  workflow_dispatch:
+    branches:
+      - main
   push:
     branches:
       - main
+
 
 jobs:
   build:
@@ -16,11 +20,11 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
-        python-version: 3.x
+        python-version: 3.11
 
     - name: Install dependencies
       run: |
-        pip install pyinstaller
+        pip install -r requirements.txt
 
     - name: Build executable
       run: |
@@ -30,26 +34,9 @@ jobs:
       run: |
         mv dist/sort_pics.exe ./
 
-    - name: Create release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Create Release
+      uses: ncipollo/release-action@v1
       with:
-        tag_name: v${{ github.run_number }}
-        release_name: Release ${{ github.run_number }}
-        body: |
-          Automatic release of version ${{ github.run_number }}
-        draft: false
-        prerelease: false
-
-    - name: Upload exe
-      id: upload-release-asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./sort_pics.exe
-        asset_name: sort_pics-${{ github.run_number }}.exe
-        asset_content_type: application/octet-stream
+        name: Release ${{ github.run_number }}
+        tag: v${{ github.run_number }}
+        body: Automatic release of version ${{ github.run_number }}
